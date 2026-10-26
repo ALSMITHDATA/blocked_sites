@@ -1,0 +1,10 @@
+# venv
+bin/
+lib/
+include/
+pyvenv.cfg
+__pycache__/
+.DS_Store
+
+# debug dumps
+*.html
