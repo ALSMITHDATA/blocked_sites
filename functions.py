@@ -3,6 +3,8 @@ import time
 from bs4 import BeautifulSoup
 import pandas as pd
 
+from config import PER_PAGE
+
 def has_no_results(html):
     return "No results found." in html
 
@@ -64,6 +66,20 @@ def extract_records(html):
     return records
 
 
+def post_page(s, base, csrf, page):
+    return s.post(
+        f"{base}/pagedSearchResults.do",
+        data={
+            "_csrf": csrf,
+            "searchCriteria.page": str(page),
+            "action": "page",
+            "orderBy": "DateReceived",
+            "orderByDirection": "Descending",
+            "searchCriteria.resultsPerPage": str(PER_PAGE),
+        },
+        timeout=15,
+    )
+
 def get_all_pages(first_response, s, base):
     all_records = []
 
@@ -71,42 +87,33 @@ def get_all_pages(first_response, s, base):
         print("Page 1: 0 records (no results found)")
         return all_records
 
-    records = extract_records(first_response.text)
-    print(f"Page 1: {len(records)} records")
-    all_records.extend(records)
-
-    if not records:
-        print("Warning: results page present but 0 records parsed — check selector")
+    # The first search response is still at 10 per page, so re-request
+    # page 1 via the paging endpoint to get it at PER_PAGE.
+    csrf = get_csrf_token(first_response.text)
+    if not csrf:
+        print("No CSRF token on first response, stopping")
         return all_records
 
-    current_html = first_response.text
-    page = 2
-
+    page = 1
     while True:
-        page_csrf = get_csrf_token(current_html)
-        if not page_csrf:
-            print(f"No CSRF token found on page {page - 1} — stopping")
-            break
-
-        response = s.post(
-            f"{base}/pagedSearchResults.do",
-            data={
-                "_csrf": page_csrf,
-                "searchCriteria.page": str(page),
-                "action": "page",
-            },
-            timeout=15,
-        )
+        response = post_page(s, base, csrf, page)
         response.raise_for_status()
 
         records = extract_records(response.text)
         print(f"Page {page}: {len(records)} records")
-
         if not records:
             break
 
         all_records.extend(records)
-        current_html = response.text
+
+        if len(records) < PER_PAGE:   # last page, so skip the extra request
+            break
+
+        csrf = get_csrf_token(response.text)
+        if not csrf:
+            print(f"No CSRF token on page {page}, stopping")
+            break
+
         page += 1
         time.sleep(1)
 

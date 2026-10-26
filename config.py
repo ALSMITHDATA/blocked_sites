@@ -11,6 +11,7 @@ BASE_PAYLOAD = {
     "searchCriteria.caseDecision": "",
     "searchCriteria.appealStatus": "",
     "searchCriteria.appealDecision": "",
+    "searchCriteria.resultsPerPage": 100,
     "caseAddressType": "Application",
     "searchCriteria.address": "",
     "date(applicationCommitteeStart)": "",
@@ -23,6 +24,8 @@ BASE_PAYLOAD = {
 }
 
 CASE_TYPES = ["FA", "OA", "PIP"]
+
+PER_PAGE = 100
 
 DEVELOPMENT_TYPES = ["01", "001", "06", "013"]
 
